@@ -119,7 +119,4 @@ public class UserController {
     public JSONObject modPhoto(HttpServletRequest request, @RequestParam MultipartFile multipartFile,@RequestParam String type, Model model) throws IOException, FileUploadException, ParseException {
         return JSONUtils.success(userService.modPhoto(request,multipartFile,type,model));
     }
-
-
-
 }
