@@ -4,10 +4,16 @@ import com.geek.guiyu.domain.dataobject.*;
 import com.geek.guiyu.domain.exception.AlreadyRegisterException;
 import com.geek.guiyu.domain.exception.NoPhoneException;
 import com.geek.guiyu.domain.exception.ShortMessageException;
+import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.Model;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.text.ParseException;
 import java.util.List;
 @Transactional(isolation = Isolation.REPEATABLE_READ, propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
 public interface UserService {
@@ -26,7 +32,7 @@ public interface UserService {
      * @return
      * @throws ShortMessageException
      */
-    TokenDTO register(RegisterDTO registerDTO) throws ShortMessageException;
+    TokenDTO register(RegisterDTO registerDTO) throws ShortMessageException, ParseException;
 
     /**
      * 登录接口
@@ -43,7 +49,7 @@ public interface UserService {
      * @param editInfoDTO
      * @return
      */
-    boolean editUserInfo(String token, UserEditInfoDTO editInfoDTO);
+    boolean editUserInfo(String token, UserEditInfoDTO editInfoDTO) throws ParseException;
 
     /**
      * 查询用户信息
@@ -65,4 +71,15 @@ public interface UserService {
      * @return
      */
     List<FansDTO> queryFans(String token);
+
+
+    /**
+     * 修改用户头像，背景
+     * @param request
+     * @param multipartFile
+     * @param type
+     * @param model
+     * @return
+     */
+    Boolean modPhoto(HttpServletRequest request, MultipartFile multipartFile,String type, Model model) throws IOException, FileUploadException, ParseException;
 }

@@ -19,7 +19,8 @@ public class UploadUtils {
         // 后缀名
         String suffixName = fileName.substring(fileName.lastIndexOf("."));
         // 上传后的路径
-        String filePath = "E://upload//";
+//        String filePath = "E://upload//";
+        String filePath = "/Users/piwenjing/Desktop/";
         // 新文件名
         fileName = UUID.randomUUID() + suffixName;
         File dest = new File(filePath + fileName);

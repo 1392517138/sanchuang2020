@@ -10,6 +10,6 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class UserFileDTO implements Serializable {
     private String topic;
-    private String describe;
+    private String describes;
     private static final long serialVersionUID = -362566296742773252L;
 }
