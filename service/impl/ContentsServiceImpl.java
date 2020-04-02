@@ -9,6 +9,7 @@ import com.geek.guiyu.domain.model.LoveContents;
 import com.geek.guiyu.domain.model.UserInfo;
 import com.geek.guiyu.infrastructure.dao.ContentsDao;
 import com.geek.guiyu.infrastructure.dao.ContentsMapper;
+import com.geek.guiyu.infrastructure.dao.LoveContentsDao;
 import com.geek.guiyu.infrastructure.dao.LoveContentsMapper;
 import com.geek.guiyu.service.ContentsService;
 import com.geek.guiyu.service.UploadService;
@@ -50,7 +51,8 @@ public class ContentsServiceImpl implements ContentsService {
     private ContentsMapper contentsMapper;
     @Autowired
     private LoveContentsMapper loveContentsMapper;
-
+    @Autowired
+    private LoveContentsDao loveContentsDao;
 
 
     @Override
@@ -60,13 +62,13 @@ public class ContentsServiceImpl implements ContentsService {
         Contents contents = dozerMapper.map(contentsDTO, Contents.class);
         String type = contentsDTO.getType();
         //判断类型，post,post_draft,attachment
-        if ("post".equals(type)){
+        if ("post".equals(type)) {
             contents.setType("post");
-            contents.setStatus((byte)1);
+            contents.setStatus((byte) 1);
         }
-        if ("post_draft".equals(type)){
+        if ("post_draft".equals(type)) {
             contents.setType("post_draft");
-            contents.setStatus((byte)0);
+            contents.setStatus((byte) 0);
         }
         //1.插入
         contents.setCreateTime(TimeUtils.getTime("ss"));
@@ -75,15 +77,15 @@ public class ContentsServiceImpl implements ContentsService {
         contents.setCommentsNum(0);
         contents.setLoveCount(0);
         contents.setViews(0);
-        contents.setIsHot((byte)0);
+        contents.setIsHot((byte) 0);
         contents.setParent(0);
         //获取插入后返回主键值，设置其附件
         int parentid = contentsDao.insert(contents);
         int order = 1;
-        for (MultipartFile multipartFile:multipartFiles
-             ) {
-            String path = UploadUtils.imageUpload(request,multipartFile,model);
-            UserFileDTO userFileDTO = new UserFileDTO("文章附件","文章附件");
+        for (MultipartFile multipartFile : multipartFiles
+                ) {
+            String path = UploadUtils.imageUpload(request, multipartFile, model);
+            UserFileDTO userFileDTO = new UserFileDTO("文章附件", "文章附件");
             //2.放到user_file表
             String fileUrl = uploadService.uploadImage(userFileDTO, request, multipartFile, model);
             //3.放到contents表
@@ -103,6 +105,7 @@ public class ContentsServiceImpl implements ContentsService {
 
     /**
      * 得到草稿
+     *
      * @param request
      * @return
      */
@@ -123,17 +126,22 @@ public class ContentsServiceImpl implements ContentsService {
 
     /**
      * 得到喜欢的文章
+     *
      * @param request
      * @return
      */
     @Override
     public List<ContentsAllDTO> getLoveArticles(HttpServletRequest request) {
-
+        UserInfo userInfo = tokenUtils.getUserInfo("token");
+        List<Integer> integers = loveContentsDao.selectLoveCids(userInfo.getId());
+        //1.创建List,存储文章
+        integers.parallelStream().forEach(integer -> );
         return null;
     }
 
     /**
      * 添加/取消 喜欢的文章
+     *
      * @param request
      * @param cid
      * @param type=(add,abolish)
@@ -146,23 +154,42 @@ public class ContentsServiceImpl implements ContentsService {
         //如果type=add则为添加喜欢的文章，abolish为取消喜欢
         LoveContents loveContents = new LoveContents();
         loveContents.setCreateTime(TimeUtils.getTime("ss"));
-        if ("add".equals(type)){
-            loveContentsMapper.insert();
+        //设置用户名和文章id
+        loveContents.setUid(userInfo.getId());
+        loveContents.setCid(cid);
+        //判断是否之前收藏过，即之前收藏过又取消，又收藏，则不插入记录,更新deleted
+        if (loveContentsDao.selectLoveExists(userInfo.getId(), cid) > 0) {
+            if ("abolish".equals(type)) {
+                loveContentsDao.updateDeletedByUidAndCid((byte) 1, userInfo.getId(), cid, TimeUtils.getTime("ss"));
+                return true;
+            }
+            //如果存在，则更新updateTime与deleted
+            if ("add".equals(type)) {
+                loveContentsDao.updateDeletedByUidAndCid((byte) 0, userInfo.getId(), cid, TimeUtils.getTime("ss"));
+                return true;
+            }
         }
-        return false;
+        //此种情况则为以前未love过，直接新建
+        if ("add".equals(type)) {
+            loveContents.setUpdateTime(TimeUtils.getTime("ss"));
+            loveContents.setDeleted((byte) 0);
+            loveContentsMapper.insert(loveContents);
+        }
+        return true;
     }
 
     /**
      * 传入contents得到相应带有附件的对象列表
+     *
      * @param contents
      * @return
      */
     private List<ContentsAllDTO> getContentsAllDTOS(List<Contents> contents) {
         List<ContentsAllDTO> contentsAllDTOS = new LinkedList<>();
-        for (Contents content:contents
-             ) {
+        for (Contents content : contents
+                ) {
             //如果为文章本身，转化为ContentsALLDTO对象中到ContentDTO
-            if (0 == content.getParent()){
+            if (0 == content.getParent()) {
                 /**
                  * 先转换成all对象，再查询该cid下的附件添加
                  */
@@ -175,8 +202,8 @@ public class ContentsServiceImpl implements ContentsService {
                 criteria1.andParentEqualTo(content.getParent());
                 List<Contents> contents1 = contentsMapper.selectByExample(contentsExample1);
                 //3.将contents1中的text与order设置进map
-                for (Contents content2: contents1
-                     ) {
+                for (Contents content2 : contents1
+                        ) {
                     map.setAttachmentUrl(content2.getText());
                     map.setOrder(content2.getOrder());
                 }
