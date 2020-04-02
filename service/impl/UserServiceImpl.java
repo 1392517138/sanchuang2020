@@ -4,12 +4,10 @@ import com.geek.guiyu.domain.dataobject.*;
 import com.geek.guiyu.domain.exception.AlreadyRegisterException;
 import com.geek.guiyu.domain.exception.NoPhoneException;
 import com.geek.guiyu.domain.exception.ShortMessageException;
-import com.geek.guiyu.domain.model.UserFile;
-import com.geek.guiyu.domain.model.UserFollow;
-import com.geek.guiyu.domain.model.UserInfo;
-import com.geek.guiyu.domain.model.UserInfoExample;
+import com.geek.guiyu.domain.model.*;
 import com.geek.guiyu.infrastructure.dao.UserFileMapper;
 import com.geek.guiyu.infrastructure.dao.UserFollowDao;
+import com.geek.guiyu.infrastructure.dao.UserFollowMapper;
 import com.geek.guiyu.infrastructure.dao.UserInfoMapper;
 import com.geek.guiyu.service.UserService;
 import com.geek.guiyu.service.util.ShortMessageUtil;
@@ -39,6 +37,8 @@ public class UserServiceImpl implements UserService {
     private ShortMessageUtil shortMessageUtil;
     @Autowired
     private UserInfoMapper userInfoMapper;
+    @Autowired
+    private UserFollowMapper userFollowMapper;
     @Autowired
     private UserFileMapper userFileMapper;
     @Autowired
@@ -178,6 +178,8 @@ public class UserServiceImpl implements UserService {
         // 指定查询条件
         UserFollow userFollow = new UserFollow();
         userFollow.setFansId(userInfo.getId());
+        //设置不被删除
+        userFollow.setDeleted((byte)0);
         // 从数据库中查询到关注的id
         List<UserFollow> userFollows = userFollowDao.queryAll(userFollow);
         List<FollowDTO> followDTOS = new LinkedList<>();
@@ -199,6 +201,9 @@ public class UserServiceImpl implements UserService {
         // 指定查询条件
         UserFollow userFollow = new UserFollow();
         userFollow.setFollowId(userInfo.getId());
+        //设置未被删除
+        userFollow.setDeleted((byte)0);
+
         // 从数据库中查询到粉丝的id
         List<UserFollow> userFollows = userFollowDao.queryAll(userFollow);
         List<FansDTO> fansDTO = new LinkedList<>();
@@ -240,6 +245,47 @@ public class UserServiceImpl implements UserService {
         return this.editUserInfo(token,userEditInfoDTO);
     }
 
+    /**
+     * 添加用户关注的人
+     * @param token
+     * @param id
+     * @return
+     */
+    @Override
+    public boolean setUserFollow(String token, Integer id) throws ParseException {
+        UserInfo userInfo = tokenUtils.getUserInfo(token);
+        UserFollow userFollow = new UserFollow();
+        userFollow.setCreateTime(TimeUtils.getTime("ss"));
+        userFollow.setUpdateTime(TimeUtils.getTime("ss"));
+        //设置粉丝id
+        userFollow.setFansId(userInfo.getId());
+        //设置被关注者id
+        userFollow.setFollowId(id);
+        userFollowDao.insert(userFollow);
+        return true;
+    }
+
+    /**
+     * 设置用户不关注某用户
+     * @param token
+     * @param id
+     * @return
+     */
+    @Override
+    public boolean setUserNotFollow(String token, Integer id) {
+        UserInfo userInfo = tokenUtils.getUserInfo(token);
+        UserFollowExample userFollowExample = new UserFollowExample();
+        UserFollowExample.Criteria criteria = userFollowExample.createCriteria();
+        criteria.andFollowIdEqualTo(id);
+        criteria.andFansIdEqualTo(userInfo.getId());
+        UserFollow userFollow = new UserFollow();
+        //设置删除
+        userFollow.setDeleted((byte)1);
+        //执行操作
+        userFollowMapper.updateByExampleSelective(userFollow,userFollowExample);
+        return false;
+    }
+
     private void setUserFile(UserInfo userInfo, String path,byte b) throws ParseException {
         UserFile userFile = new UserFile();
         userFile.setCreateTime(TimeUtils.getTime("ss"));
@@ -249,10 +295,10 @@ public class UserServiceImpl implements UserService {
         //如果是头像，设置topic和describe
         if (b == 0){
             userFile.setTopic("头像");
-            userFile.setdescribes("头像");
+            userFile.setDescribes("头像");
         } else {
             userFile.setTopic("背景头像");
-            userFile.setdescribes("背景头像");
+            userFile.setDescribes("背景头像");
         }
         userFile.setUserId(userInfo.getId());
         log.warn(userFile.toString());

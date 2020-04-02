@@ -42,7 +42,7 @@ public class UploadServiceImpl implements UploadService {
      * @throws FileUploadException
      */
     @Override
-    public boolean uploadImage(UserFileDTO userFileDTO, HttpServletRequest request, MultipartFile file, Model model) throws IOException, FileUploadException {
+    public String uploadImage(UserFileDTO userFileDTO, HttpServletRequest request, MultipartFile file, Model model) throws IOException, FileUploadException {
         // 将文件保存到服务器， 获得文件的相对路径
         String imageUrl = UploadUtils.imageUpload(request, file, model);
         // 把数据保存到相对路径
@@ -54,7 +54,11 @@ public class UploadServiceImpl implements UploadService {
         // 从redis中获得用户信息
         Integer userId = (tokenUtils.getUserInfo(request.getHeader("token")).getId());
         userFile.setUserId(userId);
-        return userFileMapper.insert(userFile) > 1;
+        /**
+         * modify by piwenjing
+         */
+//        return userFileMapper.insert(userFile) > 1;
+        return imageUrl;
     }
 
     @Override

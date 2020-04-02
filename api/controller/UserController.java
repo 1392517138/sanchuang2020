@@ -9,6 +9,7 @@ import com.geek.guiyu.service.UserService;
 import com.geek.guiyu.service.util.JSONUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.apiguardian.api.API;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,8 @@ import java.text.ParseException;
 public class UserController {
     @Autowired
     private UserService userService;
+    private HttpServletRequest request;
+    private Integer id;
 
     /**
      * 短信controller层
@@ -114,9 +117,39 @@ public class UserController {
         return JSONUtils.success(userService.queryFans(token));
     }
 
+    /**
+     * 添加自己关注的人
+     * @param request
+     * @param id
+     * @return
+     * @throws ParseException
+     */
+    @GetMapping("/setUserFollow")
+    @ApiOperation("添加自己关注的人")
+    public JSONObject setUserFollow(HttpServletRequest request, @ApiParam("要添加人的id") @RequestParam Integer id) throws ParseException {
+        String token = request.getHeader("token");
+        return JSONUtils.success(userService.setUserFollow(token, id));
+    }
+
+    @GetMapping("/setUserNotFollow")
+    @ApiOperation("设置这个人不关注")
+    public JSONObject setUserNotFollow(HttpServletRequest request, @ApiParam("要取消关注的人id") @RequestParam Integer id) throws ParseException {
+        String token = request.getHeader("token");
+        return JSONUtils.success(userService.setUserNotFollow(token, id));
+    }
+
+    /**
+     * 修改用户头像
+     * @param request
+     * @param multipartFile
+     * @param type
+     * @param model
+     */
     @PostMapping("/modPhoto")
     @ApiOperation("修改用户头像,背景，Type=(avatar,back)分别为头像，背景")
     public JSONObject modPhoto(HttpServletRequest request, @RequestParam MultipartFile multipartFile,@RequestParam String type, Model model) throws IOException, FileUploadException, ParseException {
         return JSONUtils.success(userService.modPhoto(request,multipartFile,type,model));
     }
+
+
 }

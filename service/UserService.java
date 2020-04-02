@@ -82,4 +82,20 @@ public interface UserService {
      * @return
      */
     Boolean modPhoto(HttpServletRequest request, MultipartFile multipartFile,String type, Model model) throws IOException, FileUploadException, ParseException;
+
+    /**
+     * 设置用户关注某用户
+     * @param token
+     * @param id
+     * @return
+     */
+    boolean setUserFollow(String token, Integer id) throws ParseException;
+
+    /**
+     * 设置用户取消关注某用户
+     * @param token
+     * @param id
+     * @return
+     */
+    boolean setUserNotFollow(String token, Integer id);
 }

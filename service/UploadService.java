@@ -15,17 +15,18 @@ import java.util.List;
 
 @Transactional(isolation = Isolation.REPEATABLE_READ, propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
 public interface UploadService {
+
     /**
-     * 上传文件service接口
-     * @param userFileDTO 用户文件DTO
-     * @param request HttpServletRequest
-     * @param file 上传的文件
-     * @param model Model
-     * @return 返回是否成功
+     * modify by piwenjing
+     * @param userFileDTO
+     * @param request
+     * @param file
+     * @param model
+     * @return
      * @throws IOException
      * @throws FileUploadException
      */
-    boolean uploadImage(UserFileDTO userFileDTO, HttpServletRequest request, MultipartFile file, Model model) throws IOException, FileUploadException;
+    String uploadImage(UserFileDTO userFileDTO, HttpServletRequest request, MultipartFile file, Model model) throws IOException, FileUploadException;
 
     /**
      * 查看用户的上传文件
