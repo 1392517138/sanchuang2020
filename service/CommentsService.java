@@ -2,6 +2,7 @@ package com.geek.guiyu.service;
 
 import com.geek.guiyu.domain.dataobject.CommentsDTO;
 import com.geek.guiyu.domain.exception.NoLoginException;
+import com.geek.guiyu.domain.exception.NotAllowCommentException;
 import com.geek.guiyu.domain.model.Comments;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,7 +37,7 @@ public interface CommentsService {
      * @param commentsDTO
      * @return
      */
-    boolean publish(HttpServletRequest request, CommentsDTO commentsDTO) throws ParseException;
+    boolean publish(HttpServletRequest request, CommentsDTO commentsDTO) throws ParseException, NotAllowCommentException;
 
 
     /**

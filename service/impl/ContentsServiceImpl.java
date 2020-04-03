@@ -1,24 +1,23 @@
 package com.geek.guiyu.service.impl;
 
-import com.geek.guiyu.domain.dataobject.ContentsAllDTO;
-import com.geek.guiyu.domain.dataobject.ContentsDTO;
-import com.geek.guiyu.domain.dataobject.UserFileDTO;
-import com.geek.guiyu.domain.model.Contents;
-import com.geek.guiyu.domain.model.ContentsExample;
-import com.geek.guiyu.domain.model.LoveContents;
-import com.geek.guiyu.domain.model.UserInfo;
-import com.geek.guiyu.infrastructure.dao.ContentsDao;
-import com.geek.guiyu.infrastructure.dao.ContentsMapper;
-import com.geek.guiyu.infrastructure.dao.LoveContentsDao;
-import com.geek.guiyu.infrastructure.dao.LoveContentsMapper;
+import com.amazonaws.services.simpleemail.model.Content;
+import com.geek.guiyu.domain.dataobject.*;
+import com.geek.guiyu.domain.model.*;
+import com.geek.guiyu.infrastructure.dao.*;
 import com.geek.guiyu.service.ContentsService;
 import com.geek.guiyu.service.UploadService;
+import com.geek.guiyu.service.UserService;
 import com.geek.guiyu.service.util.TimeUtils;
 import com.geek.guiyu.service.util.TokenUtils;
 import com.geek.guiyu.service.util.UploadUtils;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import io.swagger.annotations.ApiParam;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.dozer.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,7 +26,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -53,8 +51,39 @@ public class ContentsServiceImpl implements ContentsService {
     private LoveContentsMapper loveContentsMapper;
     @Autowired
     private LoveContentsDao loveContentsDao;
+    @Autowired
+    private BrowingHistoryMapper browingHistoryMapper;
+    @Autowired
+    private UserService userService;
+
+    @Value("${pagehelper.pageSize}")
+    Integer pageSize;
 
 
+    /**
+     * 通过文章cid获取文章
+     *
+     * @param cid
+     * @return
+     */
+    @Override
+    public Contents getContentByCid(Integer cid) {
+        Contents content = contentsMapper.selectByPrimaryKey(cid);
+        return content;
+    }
+
+    /**
+     * 发布文章
+     *
+     * @param request
+     * @param multipartFiles
+     * @param contentsDTO
+     * @param model
+     * @return
+     * @throws ParseException
+     * @throws IOException
+     * @throws FileUploadException
+     */
     @Override
     public boolean publish(HttpServletRequest request, MultipartFile[] multipartFiles, ContentsDTO contentsDTO, Model model) throws ParseException, IOException, FileUploadException {
         String token = request.getHeader("token");
@@ -104,7 +133,7 @@ public class ContentsServiceImpl implements ContentsService {
     }
 
     /**
-     * 得到草稿
+     * 得到 自己发布的文章/草稿
      *
      * @param request
      * @return
@@ -119,24 +148,72 @@ public class ContentsServiceImpl implements ContentsService {
         //设置查询条件，1.用户id.2.type=post_draft
         criteria.andUidEqualTo(userInfo.getId());
         criteria.andTypeEqualTo(type);
+        //设置降序
+        contentsExample.setOrderByClause("create_time");
         List<Contents> contents = contentsMapper.selectByExample(contentsExample);
         //将contents取出文章，附件放置到contentsALLDTOS中
         return getContentsAllDTOS(contents);
     }
 
     /**
-     * 得到喜欢的文章
+     * 得到 (所有/自己喜欢/关注的人) 的文章,type=(all,love,care)
      *
      * @param request
+     * @param type
      * @return
      */
     @Override
-    public List<ContentsAllDTO> getLoveArticles(HttpServletRequest request) {
+    public PageInfo getTypeArticles(HttpServletRequest request, String type, Integer pageNum) {
         UserInfo userInfo = tokenUtils.getUserInfo("token");
-        List<Integer> integers = loveContentsDao.selectLoveCids(userInfo.getId());
-        //1.创建List,存储文章
-        integers.parallelStream().forEach(integer -> );
-        return null;
+        PageHelper.startPage(pageNum, pageSize);
+        List<Contents> contents = new LinkedList<>();
+        //如果是喜欢的文章
+        if ("love".equals(type)) {
+            List<Integer> integers = loveContentsDao.selectLoveCids(userInfo.getId());
+            //1.创建List,存储文章.因为会对每一个integer进行数据库查询操作，此阿勇parallerStream多线程并发遍历
+//            integers.parallelStream().forEach(integer -> {
+//                //在xml中设置按时间降序排序
+//                Contents content = contentsMapper.selectByPrimaryKey(integer);
+//                //2.每查询到一个content,添加进contents列表
+//                contents.add(content);
+//            });
+
+            //lambda表达式中只能引用标记了 final 的外层局部变量
+            for (Integer integer : integers
+                    ) {
+                //在xml中设置按时间降序排序
+                Contents content = contentsMapper.selectByPrimaryKey(integer);
+                //2.每查询到一个content,添加进contents列表
+                contents.add(content);
+            }
+        } else {
+            //创建查询工具
+            ContentsExample contentsExample = new ContentsExample();
+            ContentsExample.Criteria criteria = contentsExample.createCriteria();
+            //如果是所有文章
+            if ("all".equals(type)) {
+                //只查询文章
+                criteria.andParentEqualTo(0);
+                contents = contentsMapper.selectByExample(contentsExample);
+            }
+            //如果是关注的人
+            if ("care".equals(type)) {
+                List<FollowDTO> followDTOS = userService.queryFollows(request.getHeader("token"));
+                for (FollowDTO followDTO : followDTOS) {
+                    //得到关注人的id
+                    Integer id = followDTO.getId();
+
+                    criteria.andUidEqualTo(id);
+                    //为已经发布的文章
+                    criteria.andStatusEqualTo((byte) 1);
+                    contents = contentsMapper.selectByExample(contentsExample);
+                }
+            }
+        }
+        //3.拿到附件
+        List<ContentsAllDTO> contentsAllDTOS = getContentsAllDTOS(contents);
+        PageInfo pageInfo = new PageInfo(contentsAllDTOS);
+        return pageInfo;
     }
 
     /**
@@ -176,6 +253,56 @@ public class ContentsServiceImpl implements ContentsService {
             loveContentsMapper.insert(loveContents);
         }
         return true;
+    }
+
+    /**
+     * 添加浏览记录
+     *
+     * @param request
+     * @param cid
+     * @return
+     * @throws ParseException
+     */
+    @Override
+    public boolean addBrowingHistory(HttpServletRequest request, Integer cid) throws ParseException {
+        String token = request.getHeader("token");
+        UserInfo userInfo = tokenUtils.getUserInfo(token);
+        //添加文章views数
+        Contents contents = contentsMapper.selectByPrimaryKey(cid);
+        contents.setViews(contents.getViews() + 1);
+        //添加浏览记录
+        BrowingHistory browingHistory = new BrowingHistory();
+        browingHistory.setCreateTime(TimeUtils.getTime("ss"));
+        browingHistory.setCid(cid);
+        browingHistory.setUid(userInfo.getId());
+        browingHistoryMapper.insert(browingHistory);
+        return true;
+    }
+
+    /**
+     * 查询用户的浏览记录
+     *
+     * @param request
+     * @return
+     */
+    @Override
+    public List<BrowingHistoryDTO> selectBrowingHistory(HttpServletRequest request) {
+        String token = request.getHeader("token");
+        UserInfo userInfo = tokenUtils.getUserInfo(token);
+        BrowingHistoryExample browingHistoryExample = new BrowingHistoryExample();
+        BrowingHistoryExample.Criteria criteria = browingHistoryExample.createCriteria();
+        criteria.andUidEqualTo(userInfo.getId());
+        //1.查询出uid=#{uid}的浏览列表
+        List<BrowingHistory> browingHistories = browingHistoryMapper.selectByExample(browingHistoryExample);
+        //2.循环遍历，放入返回给用户的BrowingHistory列表中
+        List<BrowingHistoryDTO> browingHistoryDTOS = new LinkedList<>();
+        browingHistories.parallelStream().forEach((browingHistory -> {
+            BrowingHistory item = browingHistoryMapper.selectByPrimaryKey(browingHistory.getId());
+            BrowingHistoryDTO map = dozerMapper.map(item, BrowingHistoryDTO.class);
+            browingHistoryDTOS.add(map);
+        }));
+
+        return browingHistoryDTOS;
     }
 
     /**

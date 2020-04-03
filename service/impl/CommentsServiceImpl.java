@@ -2,11 +2,14 @@ package com.geek.guiyu.service.impl;
 
 import com.geek.guiyu.domain.dataobject.CommentsDTO;
 import com.geek.guiyu.domain.exception.NoLoginException;
+import com.geek.guiyu.domain.exception.NotAllowCommentException;
 import com.geek.guiyu.domain.model.Comments;
 import com.geek.guiyu.domain.model.CommentsExample;
+import com.geek.guiyu.domain.model.Contents;
 import com.geek.guiyu.infrastructure.dao.CommentsDao;
 import com.geek.guiyu.infrastructure.dao.CommentsMapper;
 import com.geek.guiyu.service.CommentsService;
+import com.geek.guiyu.service.ContentsService;
 import com.geek.guiyu.service.util.TimeUtils;
 import com.geek.guiyu.service.util.TokenUtils;
 import org.dozer.Mapper;
@@ -35,6 +38,9 @@ public class CommentsServiceImpl implements CommentsService {
     private CommentsDao commentsDao;
     @Autowired
     private Mapper dozerMapper;
+    @Autowired
+    private ContentsService contentsService;
+
 
 
 
@@ -72,20 +78,28 @@ public class CommentsServiceImpl implements CommentsService {
      * @throws ParseException
      */
     @Override
-    public boolean publish(HttpServletRequest request, CommentsDTO commentsDTO) throws ParseException {
+    public boolean publish(HttpServletRequest request, CommentsDTO commentsDTO) throws ParseException, NotAllowCommentException {
         //1.插入comments表
         String token = request.getHeader("token");
         Comments comments = dozerMapper.map(commentsDTO, Comments.class);
-        comments.setIp(request.getRemoteAddr());
-        comments.setAgent(request.getHeader("user-agent"));
-        comments.setCreateTime(TimeUtils.getTime("ss"));
-        comments.setDeleted((byte)0);
-        comments.setStatus((byte)0);
-        commentsMapper.insert(comments);
-        //2.更新contents中comments_num
-        Integer cid = commentsDTO.getCid();
-
-        return true;
+        //得到要评论的文章，判断其是否为可评论
+        Contents contentByCid = contentsService.getContentByCid(commentsDTO.getCid());
+        boolean tmp = false;
+        //1为可评论
+        if (contentByCid.getAllowComments() == 1) {
+            comments.setIp(request.getRemoteAddr());
+            comments.setAgent(request.getHeader("user-agent"));
+            comments.setCreateTime(TimeUtils.getTime("ss"));
+            comments.setDeleted((byte) 0);
+            comments.setStatus((byte) 0);
+            commentsMapper.insert(comments);
+            //2.更新contents中comments_num
+            Integer cid = commentsDTO.getCid();
+            tmp = true;
+        } else {
+            throw new NotAllowCommentException();
+        }
+        return tmp;
     }
 
     /**

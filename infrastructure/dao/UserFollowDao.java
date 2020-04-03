@@ -63,4 +63,12 @@ public interface UserFollowDao {
      */
     int deleteById(Object id);
 
+    /**
+     * 通过用户id查询关注者id列表
+     *
+     * @param id
+     * @return
+     */
+    List<Integer> selectFollowId(Integer id);
+
 }

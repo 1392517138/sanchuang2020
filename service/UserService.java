@@ -58,6 +58,15 @@ public interface UserService {
      */
     UserInfoDTO queryUserInfo(String token);
 
+
+    /**
+     * 通过用户id,得到关注者id列表
+     *
+     * @param fansId
+     * @return
+     */
+    List<Integer> selectFollowId(Integer fansId);
+
     /**
      * 查询用户的关注
      * @param token 用户token

@@ -3,6 +3,7 @@ package com.geek.guiyu.api.controller;
 import com.alibaba.fastjson.JSONObject;
 import com.geek.guiyu.domain.dataobject.CommentsDTO;
 import com.geek.guiyu.domain.exception.NoLoginException;
+import com.geek.guiyu.domain.exception.NotAllowCommentException;
 import com.geek.guiyu.domain.model.Comments;
 import com.geek.guiyu.service.CommentsService;
 import com.geek.guiyu.service.util.JSONUtils;
@@ -42,7 +43,7 @@ public class CommentsController {
 
     @PostMapping("/publish")
     @ApiOperation("发表评论")
-    private JSONObject publish(HttpServletRequest request, @RequestBody CommentsDTO commentsDTO) throws ParseException {
+    private JSONObject publish(HttpServletRequest request, @RequestBody CommentsDTO commentsDTO) throws ParseException, NotAllowCommentException {
         return JSONUtils.success(commentsService.publish(request, commentsDTO));
     }
 

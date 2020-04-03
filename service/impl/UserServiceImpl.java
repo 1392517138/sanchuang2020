@@ -154,7 +154,7 @@ public class UserServiceImpl implements UserService {
         UserInfoExample userInfoExample = new UserInfoExample();
         UserInfoExample.Criteria criteria = userInfoExample.createCriteria();
         //设置修改时间
-        userInfo.setUpdateTime(TimeUtils.getTime("ss"));
+        userInfo2.setUpdateTime(TimeUtils.getTime("ss"));
         // 根据id来进行修改
         criteria.andIdEqualTo(userInfo2.getId());
         userInfoMapper.updateByExampleSelective(userInfo2, userInfoExample);
@@ -165,6 +165,12 @@ public class UserServiceImpl implements UserService {
     public UserInfoDTO queryUserInfo(String token) {
         UserInfo userInfo = tokenUtils.getUserInfo(token);
         return dozerMapper.map(userInfo, UserInfoDTO.class);
+    }
+
+    @Override
+    public List<Integer> selectFollowId(Integer fansId) {
+
+        return null;
     }
 
     /**

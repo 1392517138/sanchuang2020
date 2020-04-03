@@ -62,4 +62,5 @@ public interface ContentsDao {
      */
     int deleteById(Integer cid);
 
+
 }

@@ -1,7 +1,10 @@
 package com.geek.guiyu.service;
 
+import com.geek.guiyu.domain.dataobject.BrowingHistoryDTO;
 import com.geek.guiyu.domain.dataobject.ContentsAllDTO;
 import com.geek.guiyu.domain.dataobject.ContentsDTO;
+import com.geek.guiyu.domain.model.Contents;
+import com.github.pagehelper.PageInfo;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -23,7 +26,13 @@ import java.util.List;
 @Transactional(isolation = Isolation.REPEATABLE_READ, propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
 public interface ContentsService {
 
-
+    /**
+     * 根据cid获得文章
+     *
+     * @param cid
+     * @return
+     */
+    Contents getContentByCid(Integer cid);
 
     /**
      * 发表文章
@@ -36,18 +45,19 @@ public interface ContentsService {
     boolean publish(HttpServletRequest request, MultipartFile[] multipartFiles, ContentsDTO contentsDTO, Model model) throws ParseException, IOException, FileUploadException;
 
     /**
-     * 获得所有得草稿
+     * 获得所有的  自己发布的/草稿
      * @param request
      * @return ContentsAllDTO为ContentsDTO加上
      */
     List<ContentsAllDTO> getArticles(HttpServletRequest request,String type);
 
     /**
-     * 得到喜欢的文章
+     * 得到 (所有/自己喜欢/关注的人) 的文章,type=(all,love,care)
      * @param request
+     * @param type
      * @return
      */
-    List<ContentsAllDTO> getLoveArticles(HttpServletRequest request);
+    PageInfo getTypeArticles(HttpServletRequest request, String type, Integer pageNum);
 
     /**
      * 添加/取消喜欢的文章
@@ -57,4 +67,21 @@ public interface ContentsService {
      * @return
      */
     boolean setLoveArticle(HttpServletRequest request, Integer cid, String type) throws ParseException;
+
+    /**
+     * 当点击某一个文章时，添加浏览记录至browing_history表
+     *
+     * @param request
+     * @param cid
+     * @return
+     */
+    boolean addBrowingHistory(HttpServletRequest request, Integer cid) throws ParseException;
+
+    /**
+     * 查询用户的浏览记录
+     *
+     * @param request
+     * @return
+     */
+    List<BrowingHistoryDTO> selectBrowingHistory(HttpServletRequest request);
 }
