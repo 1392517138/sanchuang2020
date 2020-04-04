@@ -26,6 +26,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -166,26 +167,26 @@ public class ContentsServiceImpl implements ContentsService {
     public PageInfo getTypeArticles(HttpServletRequest request, String type, Integer pageNum) {
         UserInfo userInfo = tokenUtils.getUserInfo("token");
         PageHelper.startPage(pageNum, pageSize);
-        List<Contents> contents = new LinkedList<>();
+        final List<Contents> contents = new LinkedList<>();
         //如果是喜欢的文章
         if ("love".equals(type)) {
             List<Integer> integers = loveContentsDao.selectLoveCids(userInfo.getId());
             //1.创建List,存储文章.因为会对每一个integer进行数据库查询操作，此阿勇parallerStream多线程并发遍历
-//            integers.parallelStream().forEach(integer -> {
-//                //在xml中设置按时间降序排序
-//                Contents content = contentsMapper.selectByPrimaryKey(integer);
-//                //2.每查询到一个content,添加进contents列表
-//                contents.add(content);
-//            });
-
-            //lambda表达式中只能引用标记了 final 的外层局部变量
-            for (Integer integer : integers
-                    ) {
+            integers.parallelStream().forEach(integer -> {
                 //在xml中设置按时间降序排序
                 Contents content = contentsMapper.selectByPrimaryKey(integer);
                 //2.每查询到一个content,添加进contents列表
                 contents.add(content);
-            }
+            });
+
+            //lambda表达式中只能引用标记了 final 的外层局部变量
+//            for (Integer integer : integers
+//                    ) {
+//                //在xml中设置按时间降序排序
+//                Contents content = contentsMapper.selectByPrimaryKey(integer);
+//                //2.每查询到一个content,添加进contents列表
+//                contents.add(content);
+//            }
         } else {
             //创建查询工具
             ContentsExample contentsExample = new ContentsExample();
@@ -194,7 +195,7 @@ public class ContentsServiceImpl implements ContentsService {
             if ("all".equals(type)) {
                 //只查询文章
                 criteria.andParentEqualTo(0);
-                contents = contentsMapper.selectByExample(contentsExample);
+                contents.addAll(contentsMapper.selectByExample(contentsExample));
             }
             //如果是关注的人
             if ("care".equals(type)) {
@@ -206,10 +207,15 @@ public class ContentsServiceImpl implements ContentsService {
                     criteria.andUidEqualTo(id);
                     //为已经发布的文章
                     criteria.andStatusEqualTo((byte) 1);
-                    contents = contentsMapper.selectByExample(contentsExample);
+                    //添加进contents集合
+                    contents.addAll(contentsMapper.selectByExample(contentsExample));
                 }
             }
         }
+        //按照时间进行排序
+        Collections.sort(contents, (c1, c2) -> {
+            return c2.getCreateTime().compareTo(c1.getCreateTime());
+        });
         //3.拿到附件
         List<ContentsAllDTO> contentsAllDTOS = getContentsAllDTOS(contents);
         PageInfo pageInfo = new PageInfo(contentsAllDTOS);

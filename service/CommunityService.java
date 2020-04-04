@@ -53,5 +53,5 @@ public interface CommunityService {
      * @param parentId
      * @return
      */
-    boolean addThumb(HttpServletRequest request, Integer parentId);
+    boolean addThumb(HttpServletRequest request, Integer id);
 }

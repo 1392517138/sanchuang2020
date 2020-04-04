@@ -3,7 +3,9 @@ package com.geek.guiyu.service.impl;
 import com.geek.guiyu.domain.dataobject.CommunityDTO;
 import com.geek.guiyu.domain.dataobject.FollowDTO;
 import com.geek.guiyu.domain.model.Community;
+import com.geek.guiyu.domain.model.CommunityExample;
 import com.geek.guiyu.domain.model.UserInfo;
+import com.geek.guiyu.infrastructure.dao.CommunityDao;
 import com.geek.guiyu.infrastructure.dao.CommunityMapper;
 import com.geek.guiyu.service.CommunityService;
 import com.geek.guiyu.service.UserService;
@@ -18,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.text.ParseException;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -32,6 +36,8 @@ public class CommunityServiceImpl implements CommunityService {
     private Mapper dozerMapper;
     @Autowired
     private CommunityMapper communityMapper;
+    @Autowired
+    private CommunityDao communityDao;
     @Autowired
     private UserService userService;
 
@@ -71,8 +77,9 @@ public class CommunityServiceImpl implements CommunityService {
      */
     @Override
     public boolean addViews(HttpServletRequest request, Integer id) {
-        communityMapper.selectByPrimaryKey()
-        return false;
+        Community community = communityMapper.selectByPrimaryKey(id);
+        community.setViewNum(community.getViewNum() + 1);
+        return true;
     }
 
     /**
@@ -88,26 +95,54 @@ public class CommunityServiceImpl implements CommunityService {
         String token = request.getHeader("token");
         UserInfo userInfo = tokenUtils.getUserInfo(token);
         PageHelper.startPage(pageNum, pageSize);
+        CommunityExample communityExample = new CommunityExample();
+        CommunityExample.Criteria criteria = communityExample.createCriteria();
+        //创建返回列表
+        final List<Community> communities = new LinkedList<>();
         //如果获取关注
         if ("care".equals(type)) {
+            //获得关注的对象列表
             List<FollowDTO> followDTOS = userService.queryFollows(token);
             followDTOS.parallelStream().forEach((followDTO -> {
-                followDTO.get
+                criteria.andAuthorIdEqualTo(followDTO.getId());
+
+//                criteria.andParentIdEqualTo(0);
+                //添加进列表
+                communities.addAll(communityMapper.selectByExample(communityExample));
+                sortByTimeDesc(communities);
             }));
         }
+        if ("recommend".equals(type)) {
+            communities.addAll(communityDao.selectRecommend());
+        }
+        if ("hot".equals(type)) {
+            communities.addAll(communityDao.selectHot());
+        }
+        //分页
+        PageInfo pageInfo = new PageInfo(communities);
 
-        return null;
+        return pageInfo;
+    }
+
+    private void sortByTimeDesc(List<Community> communities) {
+        //按照时间降序排序
+        Collections.sort(communities, (c1, c2) -> {
+            return c2.getCreateTime().compareTo(c1.getCreateTime());
+        });
     }
 
     /**
      * 给某个社区板块点赞
      *
      * @param request
-     * @param parentId
+     * @param id
      * @return
      */
     @Override
-    public boolean addThumb(HttpServletRequest request, Integer parentId) {
-        return false;
+    public boolean addThumb(HttpServletRequest request, Integer id) {
+        Community community = communityMapper.selectByPrimaryKey(id);
+        community.setThumbNum(community.getThumbNum() + 1);
+        communityMapper.updateByPrimaryKey(community);
+        return true;
     }
 }

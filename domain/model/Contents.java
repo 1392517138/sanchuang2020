@@ -1,6 +1,7 @@
 package com.geek.guiyu.domain.model;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.Date;
 
 public class Contents implements Serializable {
@@ -572,4 +573,6 @@ public class Contents implements Serializable {
         sb.append("]");
         return sb.toString();
     }
+
+
 }
