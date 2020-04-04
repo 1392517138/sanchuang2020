@@ -23,7 +23,7 @@ public interface LoveContentsDao {
      * @param cid
      * @param updateTime
      */
-    @Update("update love_contents set (deleted,update_time) values (#{deleted},#{updateTime}) where uid=#{uid} and cid=#{cid}}")
+    @Update("update love_contents set deleted=#{deleted},update_time=#{updateTime}  where uid=#{uid} and cid=#{cid}")
     void updateDeletedByUidAndCid(@Param("deleted") byte deleted, @Param("uid") Integer uid, @Param("cid") Integer cid, @Param("updateTime") Date updateTime);
 
     /**
@@ -33,7 +33,7 @@ public interface LoveContentsDao {
      * @param cid
      * @return
      */
-    @Select("select count(*) from love_contents where uid=#{uid} and cid=#{cid}}")
+    @Select("select count(*) from love_contents where uid=#{uid} and cid=#{cid}")
     int selectLoveExists(@Param("uid") Integer uid, @Param("cid") Integer cid);
 
     /**
@@ -42,6 +42,6 @@ public interface LoveContentsDao {
      * @param uid
      * @return
      */
-    @Select("select cid from love_contents where deleted=0 and uid=#{cid}")
+    @Select("select cid from love_contents where deleted=0 and uid=#{uid}")
     List<Integer> selectLoveCids(@Param("uid") Integer uid);
 }

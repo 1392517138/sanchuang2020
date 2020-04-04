@@ -108,7 +108,7 @@ public class CommunityServiceImpl implements CommunityService {
 
 //                criteria.andParentIdEqualTo(0);
                 //添加进列表
-                communities.addAll(communityMapper.selectByExample(communityExample));
+                communities.addAll(communityMapper.selectByExampleWithBLOBs(communityExample));
                 sortByTimeDesc(communities);
             }));
         }

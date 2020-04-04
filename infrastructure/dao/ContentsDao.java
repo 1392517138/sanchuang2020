@@ -2,13 +2,14 @@ package com.geek.guiyu.infrastructure.dao;
 
 import com.geek.guiyu.domain.model.Contents;
 import org.apache.ibatis.annotations.Param;
+
 import java.util.List;
 
 /**
  * (Contents)表数据库访问层
  *
  * @author makejava
- * @since 2020-03-31 13:43:35
+ * @since 2020-04-04 17:16:16
  */
 public interface ContentsDao {
 
@@ -61,6 +62,5 @@ public interface ContentsDao {
      * @return 影响行数
      */
     int deleteById(Integer cid);
-
 
 }

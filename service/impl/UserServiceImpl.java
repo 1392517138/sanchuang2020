@@ -1,6 +1,7 @@
 package com.geek.guiyu.service.impl;
 
 import com.geek.guiyu.domain.dataobject.*;
+import com.geek.guiyu.domain.exception.AllreadyFollowException;
 import com.geek.guiyu.domain.exception.AlreadyRegisterException;
 import com.geek.guiyu.domain.exception.NoPhoneException;
 import com.geek.guiyu.domain.exception.ShortMessageException;
@@ -157,6 +158,9 @@ public class UserServiceImpl implements UserService {
         userInfo2.setUpdateTime(TimeUtils.getTime("ss"));
         // 根据id来进行修改
         criteria.andIdEqualTo(userInfo2.getId());
+        //存入redis缓存
+        tokenUtils.updateUserInfo(token, userInfo2);
+
         userInfoMapper.updateByExampleSelective(userInfo2, userInfoExample);
         return true;
     }
@@ -245,6 +249,8 @@ public class UserServiceImpl implements UserService {
         }
         //判断用户是否从未上穿过头像或者背景,先不写了，麻烦
 //        if (userInfo.getAvatarUrl() == null || userInfo.getBackgroundImage() == null){
+        //修改redis缓存
+        tokenUtils.updateUserInfo(token, userInfo);
         //更新用户文件
         setUserFile(userInfo, path,b);
         UserEditInfoDTO userEditInfoDTO = dozerMapper.map(userInfo,UserEditInfoDTO.class);
@@ -258,8 +264,15 @@ public class UserServiceImpl implements UserService {
      * @return
      */
     @Override
-    public boolean setUserFollow(String token, Integer id) throws ParseException {
+    public boolean setUserFollow(String token, Integer id) throws ParseException, AllreadyFollowException {
         UserInfo userInfo = tokenUtils.getUserInfo(token);
+        UserFollowExample userFollowExample = new UserFollowExample();
+        UserFollowExample.Criteria criteria = userFollowExample.createCriteria();
+        UserFollowExample.Criteria criteria1 = criteria.andFansIdEqualTo(id);
+        int i = userFollowMapper.countByExample(userFollowExample);
+        if (i > 0) {
+            throw new AllreadyFollowException();
+        }
         UserFollow userFollow = new UserFollow();
         userFollow.setCreateTime(TimeUtils.getTime("ss"));
         userFollow.setUpdateTime(TimeUtils.getTime("ss"));
@@ -267,6 +280,7 @@ public class UserServiceImpl implements UserService {
         userFollow.setFansId(userInfo.getId());
         //设置被关注者id
         userFollow.setFollowId(id);
+        userFollow.setDeleted((byte) 0);
         userFollowDao.insert(userFollow);
         return true;
     }

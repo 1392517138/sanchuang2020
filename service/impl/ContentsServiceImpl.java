@@ -1,6 +1,5 @@
 package com.geek.guiyu.service.impl;
 
-import com.amazonaws.services.simpleemail.model.Content;
 import com.geek.guiyu.domain.dataobject.*;
 import com.geek.guiyu.domain.model.*;
 import com.geek.guiyu.infrastructure.dao.*;
@@ -10,10 +9,9 @@ import com.geek.guiyu.service.UserService;
 import com.geek.guiyu.service.util.TimeUtils;
 import com.geek.guiyu.service.util.TokenUtils;
 import com.geek.guiyu.service.util.UploadUtils;
-import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import io.swagger.annotations.ApiParam;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.FileUploadException;
 import org.dozer.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +35,7 @@ import java.util.List;
  * @since 2020-03-31 13:43:35
  */
 @Service
+@Slf4j
 public class ContentsServiceImpl implements ContentsService {
     @Resource
     private ContentsDao contentsDao;
@@ -93,14 +92,14 @@ public class ContentsServiceImpl implements ContentsService {
         String type = contentsDTO.getType();
         //判断类型，post,post_draft,attachment
         if ("post".equals(type)) {
-            contents.setType("post");
+            contents.setCtype("post");
             contents.setStatus((byte) 1);
         }
         if ("post_draft".equals(type)) {
-            contents.setType("post_draft");
+            contents.setCtype("post_draft");
             contents.setStatus((byte) 0);
         }
-        //1.插入
+        //1.插入文章
         contents.setCreateTime(TimeUtils.getTime("ss"));
         contents.setUpdateTime(TimeUtils.getTime("ss"));
         contents.setUid(userInfo.getId());
@@ -110,26 +109,37 @@ public class ContentsServiceImpl implements ContentsService {
         contents.setIsHot((byte) 0);
         contents.setParent(0);
         //获取插入后返回主键值，设置其附件
-        int parentid = contentsDao.insert(contents);
-        int order = 1;
-        for (MultipartFile multipartFile : multipartFiles
-                ) {
-            String path = UploadUtils.imageUpload(request, multipartFile, model);
-            UserFileDTO userFileDTO = new UserFileDTO("文章附件", "文章附件");
-            //2.放到user_file表
-            String fileUrl = uploadService.uploadImage(userFileDTO, request, multipartFile, model);
-            //3.放到contents表
-            Contents contents2 = new Contents();
-            //3.1设置parent为之前所设定的主键值
-            contents2.setParent(parentid);
-            //3.2设置type=attachment
-            contents2.setType("attachment");
-            //3.3设置图片地址
-            contents2.setText(fileUrl);
-            //3.4设置图片顺序
-            contents2.setOrder(order);
-            contentsDao.insert(contents);
+        contentsDao.insert(contents);
+        int parentid = contents.getCid();
+        //如果有附件
+        if (multipartFiles.length > 0) {
+            int order = 1;
+            for (MultipartFile multipartFile : multipartFiles
+                    ) {
+
+                log.info(multipartFile.getOriginalFilename());
+
+                UserFileDTO userFileDTO = new UserFileDTO("文章附件", "文章附件");
+                //2.放到user_file表
+                String fileUrl = uploadService.uploadImage(userFileDTO, request, multipartFile, model);
+                //3.放到contents表
+                Contents contents2 = new Contents();
+                //3.1设置parent为之前所设定的主键值
+                contents2.setParent(parentid);
+                //3.2设置type=attachment
+                contents2.setCtype("attachment");
+                //3.3设置图片地址
+                contents2.setCtext(fileUrl);
+                //3.4设置图片顺序
+                contents2.setCorder(order);
+                //插入附件
+                log.info(contents2.toString());
+                contentsDao.insert(contents2);
+                //设置顺序+1
+                order++;
+            }
         }
+
         return true;
     }
 
@@ -146,12 +156,14 @@ public class ContentsServiceImpl implements ContentsService {
 
         ContentsExample contentsExample = new ContentsExample();
         ContentsExample.Criteria criteria = contentsExample.createCriteria();
+        //设置降序
+        contentsExample.setOrderByClause("`create_time` DESC");
         //设置查询条件，1.用户id.2.type=post_draft
         criteria.andUidEqualTo(userInfo.getId());
-        criteria.andTypeEqualTo(type);
-        //设置降序
-        contentsExample.setOrderByClause("create_time");
-        List<Contents> contents = contentsMapper.selectByExample(contentsExample);
+        criteria.andCtypeEqualTo(type);
+
+        List<Contents> contents = contentsMapper.selectByExampleWithBLOBs(contentsExample);
+
         //将contents取出文章，附件放置到contentsALLDTOS中
         return getContentsAllDTOS(contents);
     }
@@ -165,7 +177,8 @@ public class ContentsServiceImpl implements ContentsService {
      */
     @Override
     public PageInfo getTypeArticles(HttpServletRequest request, String type, Integer pageNum) {
-        UserInfo userInfo = tokenUtils.getUserInfo("token");
+        String token = request.getHeader("token");
+        UserInfo userInfo = tokenUtils.getUserInfo(token);
         PageHelper.startPage(pageNum, pageSize);
         final List<Contents> contents = new LinkedList<>();
         //如果是喜欢的文章
@@ -262,7 +275,7 @@ public class ContentsServiceImpl implements ContentsService {
     }
 
     /**
-     * 添加浏览记录
+     * 添加浏览记录/与文章浏览人数
      *
      * @param request
      * @param cid
@@ -276,6 +289,7 @@ public class ContentsServiceImpl implements ContentsService {
         //添加文章views数
         Contents contents = contentsMapper.selectByPrimaryKey(cid);
         contents.setViews(contents.getViews() + 1);
+        contentsDao.update(contents);
         //添加浏览记录
         BrowingHistory browingHistory = new BrowingHistory();
         browingHistory.setCreateTime(TimeUtils.getTime("ss"));
@@ -330,15 +344,18 @@ public class ContentsServiceImpl implements ContentsService {
                 ContentsExample contentsExample1 = new ContentsExample();
                 ContentsExample.Criteria criteria1 = contentsExample1.createCriteria();
                 //1.判断为附件
-                criteria1.andTypeEqualTo("attachment");
+                criteria1.andCtypeEqualTo("attachment");
                 //2.判断所属文章
-                criteria1.andParentEqualTo(content.getParent());
-                List<Contents> contents1 = contentsMapper.selectByExample(contentsExample1);
+                log.info("map为:" + map);
+                criteria1.andParentEqualTo(content.getCid());
+                List<Contents> contents1 = contentsMapper.selectByExampleWithBLOBs(contentsExample1);
+                log.info(contents1.toString());
                 //3.将contents1中的text与order设置进map
                 for (Contents content2 : contents1
                         ) {
-                    map.setAttachmentUrl(content2.getText());
-                    map.setOrder(content2.getOrder());
+                    log.warn(content2.getCtext());
+                    map.getAttachment().put(content2.getCorder(), content2.getCtext());
+                    log.info(map.getAttachment().toString());
                 }
                 //4.添加进contentsALLDTOS中
                 contentsAllDTOS.add(map);

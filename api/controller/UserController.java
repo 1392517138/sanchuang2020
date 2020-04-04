@@ -2,6 +2,7 @@ package com.geek.guiyu.api.controller;
 
 import com.alibaba.fastjson.JSONObject;
 import com.geek.guiyu.domain.dataobject.*;
+import com.geek.guiyu.domain.exception.AllreadyFollowException;
 import com.geek.guiyu.domain.exception.AlreadyRegisterException;
 import com.geek.guiyu.domain.exception.NoPhoneException;
 import com.geek.guiyu.domain.exception.ShortMessageException;
@@ -36,7 +37,7 @@ public class UserController {
      * @throws NoPhoneException
      */
     @PostMapping("/getShortMessage")
-    @ApiOperation("发送手机短信,Type=(login,register)")
+    @ApiOperation("发送手机短信,Type=(login,register)，无需token")
     public JSONObject getShortMessage(@RequestBody PhoneDTO phoneDTO) throws AlreadyRegisterException, NoPhoneException {
         return JSONUtils.success(userService.shortMessage(phoneDTO));
     }
@@ -49,7 +50,7 @@ public class UserController {
      * @throws AlreadyRegisterException
      */
     @PostMapping("/register")
-    @ApiOperation("注册")
+    @ApiOperation("注册,无需token")
     public JSONObject register(@RequestBody RegisterDTO registerDTO) throws ShortMessageException, AlreadyRegisterException, ParseException {
         return JSONUtils.success(userService.register(registerDTO));
     }
@@ -62,7 +63,7 @@ public class UserController {
      * @throws NoPhoneException
      */
     @PostMapping("/login")
-    @ApiOperation("登陆")
+    @ApiOperation("登陆，会返回token存储[后端已设置为30天过期]，用来标识用户")
     public JSONObject login(@RequestBody LoginDTO loginDTO) throws ShortMessageException, NoPhoneException {
         return JSONUtils.success(userService.login(loginDTO));
     }
@@ -74,7 +75,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/updateUserInfo")
-    @ApiOperation("更新用户信息")
+    @ApiOperation("更新用户信息,introduce为自我介绍,birthday格式:'yyyy-MM-dd',sex=(0,1)代表男、女")
     public JSONObject updateUserInfo(HttpServletRequest request, @RequestBody UserEditInfoDTO userEditInfoDTO) throws ParseException {
         String token = request.getHeader("token");
         return JSONUtils.success(userService.editUserInfo(token, userEditInfoDTO));
@@ -125,7 +126,7 @@ public class UserController {
      */
     @GetMapping("/setUserFollow")
     @ApiOperation("添加自己关注的人")
-    public JSONObject setUserFollow(HttpServletRequest request, @ApiParam("要添加人的id") @RequestParam Integer id) throws ParseException {
+    public JSONObject setUserFollow(HttpServletRequest request, @ApiParam("要添加人的id") @RequestParam Integer id) throws ParseException, AllreadyFollowException {
         String token = request.getHeader("token");
         return JSONUtils.success(userService.setUserFollow(token, id));
     }

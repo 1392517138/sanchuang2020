@@ -1,6 +1,7 @@
 package com.geek.guiyu.service;
 
 import com.geek.guiyu.domain.dataobject.*;
+import com.geek.guiyu.domain.exception.AllreadyFollowException;
 import com.geek.guiyu.domain.exception.AlreadyRegisterException;
 import com.geek.guiyu.domain.exception.NoPhoneException;
 import com.geek.guiyu.domain.exception.ShortMessageException;
@@ -98,7 +99,7 @@ public interface UserService {
      * @param id
      * @return
      */
-    boolean setUserFollow(String token, Integer id) throws ParseException;
+    boolean setUserFollow(String token, Integer id) throws ParseException, AllreadyFollowException;
 
     /**
      * 设置用户取消关注某用户

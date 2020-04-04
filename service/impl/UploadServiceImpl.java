@@ -54,6 +54,8 @@ public class UploadServiceImpl implements UploadService {
         // 从redis中获得用户信息
         Integer userId = (tokenUtils.getUserInfo(request.getHeader("token")).getId());
         userFile.setUserId(userId);
+        //插入userfile表
+        userFileMapper.insert(userFile);
         /**
          * modify by piwenjing
          */

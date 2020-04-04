@@ -16,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * (Contents)表控制层
@@ -33,14 +35,14 @@ public class ContentsController {
     @Autowired
     private ContentsService contentsService;
 
-    @PostMapping("/publish")
-    @ApiOperation("发表文章,type=(post,post_draft,atachment)")
-    public JSONObject publish(HttpServletRequest request, @RequestParam MultipartFile[] multipartFiles, @RequestBody ContentsDTO contentsDTO, Model model) throws ParseException, IOException, FileUploadException {
+    @PostMapping(value = "/publish")
+    @ApiOperation("发表文章【可带多个图片】,type=(post,post_draft),用postman测试，设置header中的token,Body中multiFiles以及contentsDTO.eg:{\"allowComments\":0,\"cid\":0,\"password...}")
+    public JSONObject publish(HttpServletRequest request, @RequestPart MultipartFile[] multipartFiles, @RequestPart ContentsDTO contentsDTO, Model model) throws ParseException, IOException, FileUploadException {
         return JSONUtils.success(contentsService.publish(request, multipartFiles, contentsDTO, model));
     }
 
     @GetMapping("/getArticles")
-    @ApiOperation("获得自己得发布的/草稿 type=(post,post_draft)")
+    @ApiOperation("获得自己得发布的/草稿 type=(post,post_draft),无需设置(cid,uid)")
     public JSONObject getDrafs(HttpServletRequest request, @RequestParam String type) {
         return JSONUtils.success(contentsService.getArticles(request, type));
     }
