@@ -79,6 +79,7 @@ public class CommunityServiceImpl implements CommunityService {
     public boolean addViews(HttpServletRequest request, Integer id) {
         Community community = communityMapper.selectByPrimaryKey(id);
         community.setViewNum(community.getViewNum() + 1);
+        communityMapper.updateByPrimaryKey(community);
         return true;
     }
 

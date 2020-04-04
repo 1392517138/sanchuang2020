@@ -20,7 +20,8 @@ public class UploadUtils {
         String suffixName = fileName.substring(fileName.lastIndexOf("."));
         // 上传后的路径
 //        String filePath = "E://upload//";
-        String filePath = "/Users/piwenjing/Desktop/guiyuimage/";
+//        String filePath = "/Users/piwenjing/Desktop/guiyuimage/";
+        String filePath = "/data/sanchuang/";
         // 新文件名
         fileName = UUID.randomUUID() + suffixName;
         File dest = new File(filePath + fileName);
@@ -32,10 +33,10 @@ public class UploadUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        String filename = "/upload/" + fileName;
+        String filename = "/data/sanchuang/" + fileName;
         model.addAttribute("filename", filename);
         StringBuffer url = request.getRequestURL();
         String tempContextUrl = url.delete(url.length() - request.getRequestURI().length(), url.length()).append("/").toString();
-        return tempContextUrl + "upload/" + fileName;
+        return tempContextUrl + fileName;
     }
 }
