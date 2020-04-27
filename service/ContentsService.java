@@ -84,4 +84,6 @@ public interface ContentsService {
      * @return
      */
     List<BrowingHistoryDTO> selectBrowingHistory(HttpServletRequest request);
+
+    List<ContentsAllDTO> searchContents(HttpServletRequest request, String title);
 }

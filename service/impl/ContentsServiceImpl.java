@@ -326,6 +326,23 @@ public class ContentsServiceImpl implements ContentsService {
     }
 
     /**
+     * 按照title搜索文章
+     *
+     * @param request
+     * @param title
+     * @return
+     */
+    @Override
+    public List<ContentsAllDTO> searchContents(HttpServletRequest request, String title) {
+        ContentsExample contentsExample = new ContentsExample();
+        ContentsExample.Criteria criteria = contentsExample.createCriteria();
+        criteria.andTitleLike(title);
+        List<Contents> contents = contentsMapper.selectByExample(contentsExample);
+        List<ContentsAllDTO> contentsAllDTOS = this.getContentsAllDTOS(contents);
+        return contentsAllDTOS;
+    }
+
+    /**
      * 传入contents得到相应带有附件的对象列表
      *
      * @param contents

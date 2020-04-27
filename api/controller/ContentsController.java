@@ -76,4 +76,10 @@ public class ContentsController {
         return JSONUtils.success(contentsService.setLoveArticle(request, cid, type));
     }
 
+    @GetMapping("/searchContents")
+    @ApiOperation("搜索文章，没用es,目前就是按文章的title进行搜搜")
+    public JSONObject searchContents(HttpServletRequest request, @RequestParam String title) {
+        return JSONUtils.success(contentsService.searchContents(request, title));
+    }
+
 }
